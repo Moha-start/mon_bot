@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Gestionnaire Web</title>
+    <style>
+        /* Reprise de votre style original */
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #1a1a1a; color: white; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+
+        /* Header avec bouton à droite */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .tache-card {
+            background-color: #2b2b2b;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex; 
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-nom { flex: 2; }
+        .info-date { flex: 1; text-align: center; }
+        .btns { flex: 1; text-align: right; display: flex; justify-content: flex-end; gap: 5px; }
+        
+        .btn { padding: 10px 20px; border-radius: 8px; text-decoration: none; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .btn-valider { background-color: green; }
+        .btn-supprimer { background-color: red; }
+        .btn-ajouter { background-color: #007bff; }
+
+        /* STYLE DE LA POPUP (MODAL) */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 100; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.7); 
+        }
+
+        .modal-content {
+            background-color: #2b2b2b;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 450px;
+            border: 1px solid #444;
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        /* --- RESPONSIVE : Marche sur tous les écrans --- */
+        @media (max-width: 768px) {
+            .tache-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            .info-date { margin: 10px 0; }
+            .btns { width: 100%; justify-content: center; }
+            .btns .btn { flex: 1; }
+            .header-container { flex-direction: column; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <h1>Liste des tâches</h1>
+            <button class="btn btn-ajouter" onclick="showModal()">+ Ajouter une tâche</button>
+        </div>
+
+        {% for tache in taches %}
+        <div class="tache-card">
+            <div class="info-nom">
+                <strong>{{ tache.titre }}</strong><br>
+                <small style="color: gray;">{{ tache.note }}</small>
+            </div>
+            <div class="info-date">
+                {{ tache.Days }} le {{ tache.date_formatee }}<br>
+                <em>{{ tache.statut }}</em>
+            </div>
+            <div class="btns">
+                <a href="/done/{{ tache.id }}" class="btn btn-valider">Valider</a>
+                <a href="/delete/{{ tache.id }}" class="btn btn-supprimer">Supprimer</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top: 0;">Nouvelle Tâche</h2>
+            <form action="/add" method="POST">
+                <label>Nom de la tâche :</label>
+                <input type="text" name="nom" required placeholder="Ex: Révision Python">
+                
+                <label>Date et Heure limite :</label>
+                <input type="datetime-local" name="date" required>
+                
+                <label>Note / Commentaire :</label>
+                <textarea name="note" rows="3" placeholder="Détails optionnels..."></textarea>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" class="btn btn-valider" style="flex: 2;">Enregistrer</button>
+                    <button type="button" class="btn btn-supprimer" style="flex: 1;" onclick="hideModal()">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showModal() { document.getElementById('addModal').style.display = 'block'; }
+        function hideModal() { document.getElementById('addModal').style.display = 'none'; }
+        
+        // Ferme la fenêtre si on clique à côté
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('addModal')) { hideModal(); }
+        }
+    </script>
+</body>
+</html>
