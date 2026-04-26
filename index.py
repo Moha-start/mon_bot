@@ -298,12 +298,26 @@ def delete_tache(id_tache:int):
         print(f"Erreur SQL : {e}")
 
 async def get_nombre(texte:str):
-    texte=texte.strip()
+    texte=texte[2:].strip()
     if texte:
         if texte.isdigit():
             return int(texte)
         else:
             await envoyer_message("le Id doit etre un nombre il doit etre un entier")
+
+async def get_flag(texte:str):
+    texte=texte.strip()
+    if texte:
+        if texte[0]=="-":
+            valuer=texte[1]
+            if valuer=="a":
+                return "a"
+            elif valuer=="f":
+                return "f"
+            elif valuer=="n":
+                return "n"
+        else:
+            await envoyer_message("un flag doit commancer par un '-'")
 
 async def fonc_add(texte:str):
     temp_title=get_entry_title(texte)
@@ -322,10 +336,15 @@ async def fonc_add(texte:str):
 async def fonc_list(texte:str):
     conn = None
     try:
-        nb=await get_nombre(texte)
+        flag=await get_flag(texte)
         conn = psycopg2.connect(**DB_PARAMS)
         curseur = conn.cursor()
-        if nb:
+        if flag=="a":
+            curseur.execute("SELECT * FROM taches ORDER BY date_limite ASC,titre;")
+        elif flag=="f":
+            curseur.execute("SELECT * FROM taches WHERE statut='FINI' ORDER BY date_limite ASC,titre;")
+        elif flag=="n":
+            nb=await get_nombre()
             curseur.execute("SELECT * FROM taches WHERE statut='EN_COURS' ORDER BY date_limite ASC,titre LIMIT %s;",(nb,))
         else:
             curseur.execute("SELECT * FROM taches WHERE statut='EN_COURS' ORDER BY date_limite ASC,titre;")
@@ -334,11 +353,7 @@ async def fonc_list(texte:str):
         
         if resultats:
             for row in resultats:
-                com=row[4]
-                if com.strip():
-                    liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n📝{com}\n\n"
-                else :
-                    liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
+                liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
         await envoyer_message(liste)
     except Error as e:
         print(f"Erreur SQL : {e}")
@@ -562,12 +577,16 @@ async def trait_tache(texte:str):
             await envoyer_message(f"❌ Une erreur s'est produite : {values[1]}")
             
     elif commande=="/help" or commande=="help":
+        #{a: tout meme supprimer,n:pour le nombre des element,f:pour ce qui est fini}
         help_text = (
                     " <b>Assistant de Tâches - Guide des Commandes</b>\n\n"
                     "✨ <b>Gestion des tâches :</b>\n"
                     "• <code>/add Titre, JJ/MM [HH:mm], [Note]</code>\n"
                     "  <i>Ex: /add Acheter du pain, 25/12 18:00, Boulangerie fermée le lundi</i>\n"
-                    "• <code>/list [nb]</code> : Affiche les [nb] prochaines tâches en cours.\n"
+                    "• <code>/list </code> : Affiche les [nb] prochaines tâches en cours.\n"
+                    "       -a : renvois tous les tache existant\n"
+                    "       -f : renvois tous les tache fini\n"
+                    "       -n nb: renvois un nombre d'elemnt donner\n"
                     "• <code>/get ID1, ID2</code> : Affiche les détails de tâches spécifiques.\n\n"
                     "⚙️ <b>Actions :</b>\n"
                     "• <code>/done ID</code> : Marquer une tâche comme terminée.\n"
