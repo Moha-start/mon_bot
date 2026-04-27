@@ -26,48 +26,101 @@ DB_PARAMS = {
 # Variable globale pour stocker l'instance du bot
 bot_service = None
 
-# --- CLASSES ---
 class Pile:
-    def __init__(self, nom_fichier="ma_pile.json"):
-        self.nom_fichier = nom_fichier
-        self.pile = self._charger()
+    def __init__(self, db_params):
+        self.db_params = db_params
+        self._creer_table()
 
-    def _charger(self):
-        if os.path.exists(self.nom_fichier):
-            with open(self.nom_fichier, 'r') as f:
-                return json.load(f)
-        return []
-
-    def _sauvegarder(self):
-        with open(self.nom_fichier, 'w') as f:
-            json.dump(self.pile, f)
+    def _creer_table(self):
+        """Crée la table de stockage de la pile si elle n'existe pas."""
+        conn = None
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS pile_historique (
+                    id SERIAL PRIMARY KEY,
+                    donnees JSONB NOT NULL,
+                    date_action TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            conn.commit()
+        except Error as e:
+            print(f"❌ Erreur création table Pile : {e}")
+        finally:
+            if conn: conn.close()
 
     def add(self, element):
-        self.pile.append(element)
-        self._sauvegarder()
+        """Ajoute une action au sommet de la pile."""
+        conn = None
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            cur = conn.cursor()
+            cur.execute("INSERT INTO pile_historique (donnees) VALUES (%s)", (json.dumps(element),))
+            conn.commit()
+        except Error as e:
+            print(f"❌ Erreur insertion Pile : {e}")
+        finally:
+            if conn: conn.close()
 
     def get(self):
-        if not self.est_vide():
-            element = self.pile.pop()
-            self._sauvegarder()
-            return element
-        return None
-        
+        """Récupère et supprime le dernier élément (LIFO)."""
+        conn = None
+        element = None
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            cur = conn.cursor()
+            # On récupère le dernier ID
+            cur.execute("SELECT id, donnees FROM pile_historique ORDER BY id DESC LIMIT 1")
+            res = cur.fetchone()
+            if res:
+                row_id, element = res
+                # On le supprime pour simuler le 'pop' de la pile
+                cur.execute("DELETE FROM pile_historique WHERE id = %s", (row_id,))
+                conn.commit()
+        except Error as e:
+            print(f"❌ Erreur récupération Pile : {e}")
+        finally:
+            if conn: conn.close()
+        return element
+
     def empty(self):
-        while not self.est_vide():
-            self.get()
-        self._sauvegarder()
-        
+        """Vide tout l'historique."""
+        conn = None
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            cur = conn.cursor()
+            cur.execute("TRUNCATE TABLE pile_historique RESTART IDENTITY")
+            conn.commit()
+        except Error as e:
+            print(f"❌ Erreur vidage Pile : {e}")
+        finally:
+            if conn: conn.close()
+
     def est_vide(self):
-        return len(self.pile) == 0
+        """Vérifie si la pile est vide."""
+        conn = None
+        vide = True
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM pile_historique")
+            vide = (cur.fetchone()[0] == 0)
+        except Error as e:
+            print(f"❌ Erreur check vide Pile : {e}")
+        finally:
+            if conn: conn.close()
+        return vide
 
     def __str__(self):
-        text=""
-        for elem in self.pile:
-            text+=str(elem)+"\n"
-        return text
+        return "Instance de Pile (Stockage : PostgreSQL)"
 
-PILE = Pile()
+    def importer_historique_existant(self, liste_json):
+        """Fonction utilitaire pour injecter ton gros JSON une seule fois."""
+        for item in liste_json:
+            self.add(item)
+        print(f"✅ {len(liste_json)} éléments importés dans la base de données !")
+PILE = Pile(DB_PARAMS)
 
 # --- FONCTIONS SYSTEME (INIT) ---
 
@@ -121,10 +174,6 @@ def vider_base_de_donnees():
     finally:
         if conn:
             conn.close()
-
-def init_db():
-    # Ignoré comme demandé, car les tables et index sont supposés être déjà créés sous PostgreSQL
-    pass
 
 def get_command(texte:str) -> tuple[str,str]:
     texte.strip()
@@ -298,24 +347,49 @@ def delete_tache(id_tache:int):
         print(f"Erreur SQL : {e}")
 
 async def get_nombre(texte:str):
-    texte=texte[2:].strip()
+    texte.strip()
     if texte:
-        if texte.isdigit():
-            return int(texte)
-        else:
-            await envoyer_message("le Id doit etre un nombre il doit etre un entier")
+        index=0
+        size=len(texte)
+        valeur=texte[index]
+        res=''
+        while index<size and not valeur.isdecimal():
+            index+=1
+            valeur=texte[index]
+        while index<size and (valeur.isdecimal() or valeur=="_"):
+            valeur=texte[index]
+            res+=valeur
+            index+=1
+        try:
+            return int(res)
+        except ValueError:
+            await envoyer_message("le Id doit etre un nombre  entier")
+        except :
+            await envoyer_message("un erreur s'est produit")
 
-async def get_flag(texte:str):
+async def get_flags(texte:str):
     texte=texte.strip()
     if texte:
         if texte[0]=="-":
-            valuer=texte[1]
-            if valuer=="a":
-                return "a"
-            elif valuer=="f":
-                return "f"
-            elif valuer=="n":
-                return "n"
+            size=len(texte)
+            i=1
+            valuer=texte[i]
+            flags=[]
+            while i<size and valuer!=" ":
+                valuer=texte[i]
+                if valuer=="a":
+                    flags.append("a")
+                    i+=1
+                elif valuer=="f":
+                    flags.append("f")
+                    i+=1
+                elif valuer=="n":
+                    flags.append("n")
+                    i+=1
+                elif valuer=="c":
+                    flags.append("c")
+                    i+=1
+            return flags
         else:
             await envoyer_message("un flag doit commancer par un '-'")
 
@@ -336,24 +410,39 @@ async def fonc_add(texte:str):
 async def fonc_list(texte:str):
     conn = None
     try:
-        flag=await get_flag(texte)
+        flags:list=get_flags(texte)
         conn = psycopg2.connect(**DB_PARAMS)
         curseur = conn.cursor()
-        if flag=="a":
-            curseur.execute("SELECT * FROM taches ORDER BY date_limite ASC,titre;")
-        elif flag=="f":
-            curseur.execute("SELECT * FROM taches WHERE statut='FINI' ORDER BY date_limite ASC,titre;")
-        elif flag=="n":
-            nb=await get_nombre()
-            curseur.execute("SELECT * FROM taches WHERE statut='EN_COURS' ORDER BY date_limite ASC,titre LIMIT %s;",(nb,))
-        else:
-            curseur.execute("SELECT * FROM taches WHERE statut='EN_COURS' ORDER BY date_limite ASC,titre;")
+        querry="SELECT * FROM taches"
+        if flags==[]:
+            querry+=" WHERE statut='EN_COURS'"
+        elif "f" in flags:
+            querry+=" WHERE statut='FINI'"
+        elif "a" not in flags:
+            querry+=" WHERE statut='EN_COURS'"
+        querry+=" ORDER BY date_limite ASC,titre"
+        if "n" in flags:
+            nb=get_nombre("5")
+            querry+=f" LIMIT {nb}"
+        if "c" in flags:
+            commentaire=True
+        querry+=";"
+        curseur.execute(querry)
         resultats = curseur.fetchall()
-        liste="📋 Tâches en cours :\n\n"
-        
         if resultats:
-            for row in resultats:
+            liste="📋 Tâches en cours :\n\n"
+            if commentaire:
+                for row in resultats:
+                    com=row[4]
+                    if com.strip():
+                        liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n📝{com}\n\n"
+                    else :
+                        for row in resultats:
+                            liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
+            else :
                 liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
+        else:
+            liste+="il y a aucune tache ouvert"
         await envoyer_message(liste)
     except Error as e:
         print(f"Erreur SQL : {e}")
@@ -577,7 +666,7 @@ async def trait_tache(texte:str):
             await envoyer_message(f"❌ Une erreur s'est produite : {values[1]}")
             
     elif commande=="/help" or commande=="help":
-        #{a: tout meme supprimer,n:pour le nombre des element,f:pour ce qui est fini}
+        #{a: tout meme supprimer,n:pour le nombre des element,f:pour ce qui est fini,c:pour les commantire}
         help_text = (
                     " <b>Assistant de Tâches - Guide des Commandes</b>\n\n"
                     "✨ <b>Gestion des tâches :</b>\n"
@@ -587,6 +676,7 @@ async def trait_tache(texte:str):
                     "       -a : renvois tous les tache existant\n"
                     "       -f : renvois tous les tache fini\n"
                     "       -n nb: renvois un nombre d'elemnt donner\n"
+                    "       -c : renvois les element avec les commantaire si possible\n"
                     "• <code>/get ID1, ID2</code> : Affiche les détails de tâches spécifiques.\n\n"
                     "⚙️ <b>Actions :</b>\n"
                     "• <code>/done ID</code> : Marquer une tâche comme terminée.\n"
@@ -598,6 +688,7 @@ async def trait_tache(texte:str):
                     "💡 <i>Note : Si vous ne précisez pas d'heure, 23:59 est utilisé par défaut.</i>"
                 )
         await envoyer_message(help_text)
+    
     else:
         await envoyer_message("commande inconnue. Tapez /help pour voir la liste.")
 
@@ -638,7 +729,6 @@ def start():
 
 if __name__=="__main__":
     print("import fini")
-    init_db()
     print("db fini")
     start()
     print("start fini")
