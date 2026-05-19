@@ -5,17 +5,19 @@ from datetime import datetime, date, timedelta
 import pytz
 import json
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-NC_URL = "https://linux-moha.tailc6cfda.ts.net/remote.php/dav/principals/users/Mohamed/"
-NC_USER = "Mohamed"
-NC_PASS = "LFzY8-9g8cd-4CSb9-qF2k5-Dfjxg"
-URL_ICS = "https://mescalendriers.u-bordeaux.fr/ics/ab94a7d112f4f9e2e87bf271f7d0d6d6"
-FICHIER_JSON = "historique_modifications.json"
+NC_URL = os.getenv("NC_URL")
+NC_USER = os.getenv("NC_USER")
+NC_PASS = os.getenv("NC_PASS")
+URL_ICS = os.getenv("URL_ICS")
+FICHIER_JSON = os.getenv("FICHIER_JSON")
 
-CALENDRIERS_GERES = ["TD Machine","Examain","Examen TD Machine","Orales","TD","Cours","Cours/TD"]
+CALENDRIERS_GERES = ["TD Machine","Examain","Examen TD Machine","Orales","TD","Cours","Cours/TD","Oraux"]
 # =============================================================================
 
 def get_now_utc():
@@ -55,7 +57,6 @@ def enregistrer_log_json(action, details):
             with open(FICHIER_JSON, 'r', encoding='utf-8') as f:
                 logs = json.load(f)
         except: pass
-    
     log_entry = {
         "date_action": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "type": action,
@@ -79,7 +80,7 @@ def ajouter_evenement(calendrier_obj, data_ics):
             dtend=data_ics['fin'],
             summary=data_ics['titre'],
             location=data_ics['lieu'],
-            description=data_ics['desc_ics_raw']
+            description=data_ics['desc_raw'] # Corrigé ici (était desc_ics_raw)
         )
         return True
     except Exception as e:
@@ -89,7 +90,6 @@ def ajouter_evenement(calendrier_obj, data_ics):
 def synchroniser_intelligent():
     print("--- Démarrage Synchro Intelligente + Logs Précis ---")
     date_limite = get_now_utc()
-    
     try:
         client = caldav.DAVClient(url=NC_URL, username=NC_USER, password=NC_PASS)
         principal = client.principal()
@@ -133,19 +133,17 @@ def synchroniser_intelligent():
 
     for cal_name, cal_obj in calendars.items():
         try:
-            events = cal_obj.date_search(start=date_limite, end=date_limite.replace(year=date_limite.year+1))
+            events = cal_obj.search(start=date_limite, end=date_limite.replace(year=date_limite.year+1))
             for ev_obj in events:
                 comp = Calendar.from_ical(ev_obj.data).walk('VEVENT')[0]
                 t = str(comp.get('summary', ''))
                 d = comp.get('dtstart').dt
                 sig_nc = generer_signature(t, d)
-                
                 if sig_nc in events_ics:
                     # L'événement existe : on check la description
                     target = events_ics[sig_nc]
                     target['trouve_sur_nc'] = True
                     desc_nc_raw = str(comp.get('description', ''))
-                    
                     if target['desc_clean'] != nettoyer_description(desc_nc_raw):
                         print(f"✏️  MàJ description : {t}")
                         mettre_a_jour_desc_event(ev_obj, target['desc_raw'])
@@ -156,7 +154,6 @@ def synchroniser_intelligent():
                             "nouvelle_description": target['desc_raw']
                         })
                         nb_updates += 1
-                
                 elif cal_name in CALENDRIERS_GERES:
                     # L'événement n'est plus dans l'ICS : on supprime
                     print(f"🗑️  Suppression : {t}")
@@ -171,22 +168,35 @@ def synchroniser_intelligent():
                     ev_obj.delete()
                     nb_suppr += 1
         except: pass
-
+    print("")
     # 5. Ajouts
+    print("\n===================================")
     for sig, data in events_ics.items():
-        if not data['trouve_sur_nc'] and data['nom_cal_cible'] in calendars:
-            cal_target = calendars[data['nom_cal_cible']]
-            print(f"🆕 Ajout : {data['titre']} -> {data['nom_cal_cible']}")
-            if ajouter_evenement(cal_target, data):
-                # LOG PRÉCIS DE L'AJOUT
-                enregistrer_log_json("AJOUT", {
-                    "titre": data['titre'], "debut": data['debut'], "fin": data['fin'],
-                    "lieu": data['lieu'], "description": data['desc_raw'],
-                    "calendrier": data['nom_cal_cible']
-                })
-                nb_ajouts += 1
+        if not data['trouve_sur_nc']:
+            # Logique d'attribution selon le titre de l'événement
+            if "ds" in data['titre'].lower() or "ex" in data['titre'].lower():
+                nom_cible = "Examain" # Orthographe exacte issue de CALENDRIERS_GERES
+            else:
+                nom_cible = "Cours"
 
-    print(f"\n✅ Synchro finie. Modifs: {nb_updates} | Suppr: {nb_suppr} | Ajouts: {nb_ajouts}")
+            # Vérification et Ajout
+            if nom_cible in calendars:
+                cal_target = calendars[nom_cible]
+                print(f"🆕 Ajout : {data['titre']} -> {nom_cible}")
+                
+                if ajouter_evenement(cal_target, data):
+                    # LOG PRÉCIS DE L'AJOUT
+                    enregistrer_log_json("AJOUT", {
+                        "titre": data['titre'], "debut": data['debut'], "fin": data['fin'],
+                        "lieu": data['lieu'], "description": data['desc_raw'],
+                        "calendrier": nom_cible
+                    })
+                    nb_ajouts += 1
+            else:
+                print(f"❌ Erreur : Impossible d'ajouter '{data['titre']}'. Le calendrier cible '{nom_cible}' est introuvable sur Nextcloud.")
+
+    print(f"\n✅ Synchro finie.\n✏️  Modifiés    : {nb_updates} \n🗑️  Supprimés   : {nb_suppr} \n➕ Ajoutés     : {nb_ajouts}")
+    print("===================================")
 
 if __name__ == "__main__":
     synchroniser_intelligent()

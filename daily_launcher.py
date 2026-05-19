@@ -3,14 +3,14 @@ import sys
 import io
 from telegram import Bot
 from check_synchro_V3 import *
-
-# --- IMPORTATION DE TON SCRIPT DE SYNCHRO ---
-# On importe juste la fonction, sans toucher au code d'origine
 from check_synchro_V3 import synchroniser_intelligent
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # --- TA CONFIGURATION (Celle de ton bot actuel) ---
-TOKEN = "8753329094:AAEz_wze3M1snmwdbhxUl7_5_8P5SSCWxQ8"
-CHAT_ID = 6302498043
+TOKEN = os.getenv("TOKEN_CALANDER")
+CHAT_ID = int(os.getenv("CHAT_ID_CALANDER"))
 
 async def main():
     # 1. On prépare la capture du texte (au lieu d'afficher à l'écran)

@@ -472,5 +472,87 @@
         "action": "DELETE",
         "evenement": "Oral enjeux environnementaux ",
         "calendrier": "Orales"
+    },
+    {
+        "date_action": "2026-05-07 00:00:05",
+        "type": "SUPPRESSION",
+        "evenement": {
+            "titre": "Réunion",
+            "debut": "2026-05-06 12:45:00+02:00",
+            "fin": "2026-05-06 13:45:00+02:00",
+            "lieu": "\nB5/Amphithéâtre GABA",
+            "description": "Amphi d'information Passage L1 vers L2",
+            "calendrier": "Cours"
+        }
+    },
+    {
+        "date_action": "2026-05-07 17:53:12",
+        "type": "MISE_A_JOUR",
+        "evenement": {
+            "titre": "4TPU296U Introduction aux enjeux des Transitions",
+            "date": "2026-05-21 17:00:00+02:00",
+            "calendrier": "TD Machine",
+            "ancienne_description": "Oraux\n\nM. MOUNOUD Pierre\n4TPU296U Introduction aux enjeux des Transitions",
+            "nouvelle_description": "Oraux\n\nA22/ Salle 102\n\nM. MOUNOUD Pierre\n4TPU296U Introduction aux enjeux des Transitions\n"
+        }
+    },
+    {
+        "date_action": "2026-05-07 17:54:58",
+        "type": "MISE_A_JOUR",
+        "evenement": {
+            "titre": "4TPU296U Introduction aux enjeux des Transitions",
+            "date": "2026-05-22 11:00:00+02:00",
+            "calendrier": "Orales",
+            "ancienne_description": "Oraux\n\n\nM. MOUNOUD Pierre\n4TPU296U Introduction aux enjeux des Transitions",
+            "nouvelle_description": "Oraux\n\nA22/ Salle 112\n\nM. MOUNOUD Pierre\n4TPU296U Introduction aux enjeux des Transitions\n"
+        }
+    },
+    {
+        "date_action": "2026-05-11 15:33:17",
+        "type": "AJOUT",
+        "evenement": {
+            "titre": "Maths pour l'informatique, EX",
+            "debut": "2026-06-02 14:30:00+02:00",
+            "fin": "2026-06-02 17:30:00+02:00",
+            "lieu": "Batiment : Collège ST_A22\nSalle : salle 119",
+            "description": "4TPU289EX - Maths pour l'informatique, EX\n\n",
+            "calendrier": "Cours"
+        }
+    },
+    {
+        "date_action": "2026-05-11 15:33:17",
+        "type": "AJOUT",
+        "evenement": {
+            "titre": "Program Web, DST",
+            "debut": "2026-06-03 09:00:00+02:00",
+            "fin": "2026-06-03 10:30:00+02:00",
+            "lieu": "Batiment : Collège ST_A22\nSalle : salle 119",
+            "description": "4TIN201DST - Program Web, DST\n\n",
+            "calendrier": "Examain"
+        }
+    },
+    {
+        "date_action": "2026-05-11 15:33:17",
+        "type": "AJOUT",
+        "evenement": {
+            "titre": "Mathémathiques discrètes, EX",
+            "debut": "2026-05-27 14:30:00+02:00",
+            "fin": "2026-05-27 17:30:00+02:00",
+            "lieu": "Batiment : Collège ST_A22\nSalle : salle 119",
+            "description": "4TPU213EX - Mathémathiques discrètes, EX\n\n",
+            "calendrier": "Cours"
+        }
+    },
+    {
+        "date_action": "2026-05-11 15:33:17",
+        "type": "AJOUT",
+        "evenement": {
+            "titre": "Bases de données, DST",
+            "debut": "2026-05-27 11:30:00+02:00",
+            "fin": "2026-05-27 13:00:00+02:00",
+            "lieu": "Batiment : Collège ST_A22\nSalle : salle 119",
+            "description": "4TIN203DST - Bases de données, DST\n\n",
+            "calendrier": "Examain"
+        }
     }
 ]

@@ -1,0 +1,7 @@
+DROP TABLE action;
+DROP TABLE rename;
+DROP TABLE "DELETE";
+DROP TABLE commante;
+DROP TABLE "DONE";
+DROP TABLE "ADD";
+DROP SEQUENCE id_transaction;

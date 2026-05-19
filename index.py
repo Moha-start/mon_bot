@@ -5,24 +5,24 @@ from psycopg2 import Error, IntegrityError
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 import re, json, os
-
+from dotenv import load_dotenv
 # --- CONFIGURATION ---
+load_dotenv()
 LOGS_ACTIFS = True
 if not LOGS_ACTIFS:
     print = lambda *args, **kwargs: None
 
-TOKEN = "8267702446:AAEyqxNWZEAy4Q3x6ToQWuwPZ2HiScmTwPA"
-CHAT_ID = 6302498043
+TOKEN = os.getenv("TOKEN_TACHE")
+CHAT_ID = int(os.getenv("CHAT_ID_TACHE"))
 
 # Paramètres de connexion PostgreSQL
 DB_PARAMS = {
-    "dbname": "tache",
-    "user": "postgres",
-    "password": "Mohamed2006",
-    "host": "localhost",
-    "port": "5432"
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT"))
 }
-
 # Variable globale pour stocker l'instance du bot
 bot_service = None
 
@@ -392,6 +392,7 @@ async def get_flags(texte:str):
             return flags
         else:
             await envoyer_message("un flag doit commancer par un '-'")
+    return []
 
 async def fonc_add(texte:str):
     temp_title=get_entry_title(texte)
@@ -410,10 +411,11 @@ async def fonc_add(texte:str):
 async def fonc_list(texte:str):
     conn = None
     try:
-        flags:list=get_flags(texte)
+        flags=await get_flags(texte)
         conn = psycopg2.connect(**DB_PARAMS)
         curseur = conn.cursor()
         querry="SELECT * FROM taches"
+        commentaire=False
         if flags==[]:
             querry+=" WHERE statut='EN_COURS'"
         elif "f" in flags:
@@ -440,7 +442,8 @@ async def fonc_list(texte:str):
                         for row in resultats:
                             liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
             else :
-                liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
+                for row in resultats:
+                    liste+=f"🔹 {row[0]} : {row[2]} \n📅{row[6]} le  {datetime.fromtimestamp(row[3]).strftime('%d/%m/%Y %H:%M')} \n\n"
         else:
             liste+="il y a aucune tache ouvert"
         await envoyer_message(liste)

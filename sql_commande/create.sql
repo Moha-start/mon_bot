@@ -17,3 +17,8 @@ CREATE TABLE notification(
             envoye INTEGER DEFAULT 0,
             CONSTRAINT PK_notification PRIMARY KEY(id)
 );
+CREATE TABLE IF NOT EXISTS pile_historique (
+    id SERIAL PRIMARY KEY,
+    donnees JSONB NOT NULL,
+    cree_le TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
