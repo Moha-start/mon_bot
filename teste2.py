@@ -1,8 +1,7 @@
-mot='-an 3'
-i=1
-res=[]
-size=len(mot)
-while i<size and mot[i]!=' ':
-    res.append(mot[i])
-    i+=1
-print(res)
+word="0123456789"
+print(word[3:])
+teste=[]
+if teste:
+    print(True)
+else:
+    print(False)

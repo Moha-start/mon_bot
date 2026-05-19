@@ -243,7 +243,7 @@ def est_dans_la_tranche(dt_a_tester:datetime):
     else:
         return t >= h_debut or t <= h_fin
 
-def list_new_time(time:datetime)->list[datetime]:
+def list_time(time:datetime)->list[datetime]:
     times=[]
     date_actue = datetime.now()
     timestamp_actuel = int(date_actue.timestamp())
@@ -367,34 +367,23 @@ async def get_nombre(texte:str):
         except :
             await envoyer_message("un erreur s'est produit")
 
-async def get_flags(texte:str):
+def get_flags(texte:str):
     texte=texte.strip()
+    index=0
+    size=len(texte)
+    flags=[]
     if texte:
         if texte[0]=="-":
-            size=len(texte)
-            i=1
-            valuer=texte[i]
+            index+=1
             flags=[]
-            while i<size and valuer!=" ":
-                valuer=texte[i]
-                if valuer=="a":
-                    flags.append("a")
-                    i+=1
-                elif valuer=="f":
-                    flags.append("f")
-                    i+=1
-                elif valuer=="n":
-                    flags.append("n")
-                    i+=1
-                elif valuer=="c":
-                    flags.append("c")
-                    i+=1
-            return flags
-        else:
-            await envoyer_message("un flag doit commancer par un '-'")
-    return []
+            while index<size and texte[index]!=" ":
+                flags.append(texte[index].lower())
+                index+=1
+    return flags,index
 
 async def fonc_add(texte:str):
+    flags,index=get_flags(texte)
+    texte=texte[index:]
     temp_title=get_entry_title(texte)
     texte=temp_title[1]
     title=temp_title[0]
@@ -402,16 +391,30 @@ async def fonc_add(texte:str):
     date=temp_time[0]
     texte=temp_time[1]
     commanter=get_commanter(texte)
-    times=list_new_time(date)
-    tache_id=await inject_in_db_tache(title,date,commanter)
-    await inject_in_db_notification(times,tache_id,title)
-    await envoyer_message(f"📝 la tache N°{tache_id} est ajouter")
-    return tache_id
+    
+    if flags:
+        nb=30
+        if 'h' in flags:
+            pass
+        elif 'd' in flags:
+            pass
+        elif 'w' in flags:
+            pass
+        elif 'm' in flags:
+            pass
+        elif 'y' in flags:
+            pass
+    else:
+        times=list_time(date)
+        tache_id=await inject_in_db_tache(title,date,commanter)
+        await inject_in_db_notification(times,tache_id,title)
+        await envoyer_message(f"📝 la tache N°{tache_id} est ajouter")
+        return tache_id
 
 async def fonc_list(texte:str):
     conn = None
     try:
-        flags=await get_flags(texte)
+        flags,index_start=get_flags(texte)
         conn = psycopg2.connect(**DB_PARAMS)
         curseur = conn.cursor()
         querry="SELECT * FROM taches"
@@ -424,7 +427,7 @@ async def fonc_list(texte:str):
             querry+=" WHERE statut='EN_COURS'"
         querry+=" ORDER BY date_limite ASC,titre"
         if "n" in flags:
-            nb=get_nombre("5")
+            nb=get_nombre(texte[index_start:])
             querry+=f" LIMIT {nb}"
         if "c" in flags:
             commentaire=True
@@ -550,7 +553,7 @@ async def rollback():
         conn.commit()
         conn.close()
         date=datetime.fromtimestamp(timestamp)
-        times=list_new_time(date)
+        times=list_time(date)
         await inject_in_db_notification(times,tache_id,title)
         await envoyer_message(f"📝 la tache N°{tache_id} est ajouter")
         
@@ -675,6 +678,13 @@ async def trait_tache(texte:str):
                     "✨ <b>Gestion des tâches :</b>\n"
                     "• <code>/add Titre, JJ/MM [HH:mm], [Note]</code>\n"
                     "  <i>Ex: /add Acheter du pain, 25/12 18:00, Boulangerie fermée le lundi</i>\n"
+                    #"• /add \[-flag\] \[nombre\] Titre, JJ/MM \[HH:mm\], \[Note\]"
+                    #"Nb de base =30"
+                    #"       -h : hourly chaque heure"
+                    #"       -d : daily chaque jour"
+                    #"       -w : weekly chaque semaine"
+                    #"       -m : monthly chaque mois"
+                    #s"       -y : yearly chaque année (ou par an"
                     "• <code>/list </code> : Affiche les [nb] prochaines tâches en cours.\n"
                     "       -a : renvois tous les tache existant\n"
                     "       -f : renvois tous les tache fini\n"
