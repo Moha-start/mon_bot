@@ -2,8 +2,7 @@ import asyncio
 import sys
 import io
 from telegram import Bot
-from check_synchro_V3 import *
-from check_synchro_V3 import synchroniser_intelligent
+from check_synchro import *
 import os
 from dotenv import load_dotenv
 load_dotenv()
