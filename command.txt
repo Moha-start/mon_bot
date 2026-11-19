@@ -1,3 +1,7 @@
 sudo systemctl stop monbot-bot.service
 sudo systemctl restart monbot-bot.service
 sudo systemctl status monbot-bot.service
+
+
+
+sudo crontab -e
